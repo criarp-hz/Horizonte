@@ -3,7 +3,7 @@ const {
     ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle
 } = require('discord.js');
 const mongoose = require('mongoose');
-const Registro = require('./models/Registro'); 
+const Registro = require('./models/Registro');
 require('dotenv').config();
 
 const client = new Client({
@@ -105,7 +105,6 @@ client.on('interactionCreate', async (interaction) => {
             if (!['1','2','3'].includes(cargoNum)) 
                 return interaction.editReply("❌ Cargo inválido! Use apenas 1, 2 ou 3.");
 
-            // Salvar no Banco
             const novoRegistro = await Registro.findOneAndUpdate(
                 { userId: interaction.user.id },
                 { nick, cargoNum, status: 'PENDENTE', $inc: { tentativas: 1 } },
@@ -115,7 +114,6 @@ client.on('interactionCreate', async (interaction) => {
             if (novoRegistro.tentativas > 3) 
                 return interaction.editReply("❌ Limite de 3 tentativas excedido.");
 
-            // Enviar para canal staff
             const canalStaff = client.channels.cache.get(CONFIG.CANAL_LOGS_STAFF);
             const embedStaff = new EmbedBuilder()
                 .setTitle('📥 NOVO REGISTRO')
