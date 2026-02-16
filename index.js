@@ -1,14 +1,17 @@
 const { 
     Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, 
-    ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, 
-    Collection, PermissionsBitField 
+    ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle
 } = require('discord.js');
 const mongoose = require('mongoose');
-const Registro = require('./models/Registro'); // Certifique-se de criar a pasta models
+const Registro = require('./models/Registro'); 
 require('dotenv').config();
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages],
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMembers, 
+        GatewayIntentBits.GuildMessages
+    ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
@@ -50,7 +53,11 @@ client.on('interactionCreate', async (interaction) => {
                 .setFooter({ text: 'Horizonte Roleplay' });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('iniciar_registro').setLabel('Registrar-se').setEmoji('📋').setStyle(ButtonStyle.Primary)
+                new ButtonBuilder()
+                    .setCustomId('iniciar_registro')
+                    .setLabel('Registrar-se')
+                    .setEmoji('📋')
+                    .setStyle(ButtonStyle.Primary)
             );
 
             await interaction.reply({ embeds: [embed], components: [row] });
@@ -65,23 +72,38 @@ client.on('interactionCreate', async (interaction) => {
                 .setCustomId('modal_registro')
                 .setTitle('Registro de Membro');
 
-            const nickInput = new TextInputBuilder().setCustomId('nick').setLabel('NICK').setPlaceholder('Nome do personagem').setStyle(TextInputStyle.Short).setRequired(true);
-            const cargoInput = new TextInputBuilder().setCustomId('cargo').setLabel('CARGO (1 a 3)').setPlaceholder('1-Ajudante, 2-Mod, 3-Adm').setMaxLength(1).setStyle(TextInputStyle.Short).setRequired(true);
+            const nickInput = new TextInputBuilder()
+                .setCustomId('nick')
+                .setLabel('NICK')
+                .setPlaceholder('Nome do personagem')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
 
-            modal.addComponents(new ActionRowBuilder().addComponents(nickInput), new ActionRowBuilder().addComponents(cargoInput));
+            const cargoInput = new TextInputBuilder()
+                .setCustomId('cargo')
+                .setLabel('CARGO (1 a 3)')
+                .setPlaceholder('1-Ajudante, 2-Mod, 3-Adm')
+                .setMaxLength(1)
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(nickInput),
+                new ActionRowBuilder().addComponents(cargoInput)
+            );
+
             await interaction.showModal(modal);
         }
 
         // --- RECEBIMENTO DO MODAL ---
         if (interaction.isModalSubmit() && interaction.customId === 'modal_registro') {
             await interaction.deferReply({ ephemeral: true });
-            
+
             const nick = interaction.fields.getTextInputValue('nick');
             const cargoNum = interaction.fields.getTextInputValue('cargo');
 
-            if (!['1', '2', '3'].includes(cargoNum)) {
+            if (!['1','2','3'].includes(cargoNum)) 
                 return interaction.editReply("❌ Cargo inválido! Use apenas 1, 2 ou 3.");
-            }
 
             // Salvar no Banco
             const novoRegistro = await Registro.findOneAndUpdate(
@@ -90,11 +112,10 @@ client.on('interactionCreate', async (interaction) => {
                 { upsert: true, new: true }
             );
 
-            if (novoRegistro.tentativas > 3) {
+            if (novoRegistro.tentativas > 3) 
                 return interaction.editReply("❌ Limite de 3 tentativas excedido.");
-            }
 
-            // Enviar para o canal de Logs Staff
+            // Enviar para canal staff
             const canalStaff = client.channels.cache.get(CONFIG.CANAL_LOGS_STAFF);
             const embedStaff = new EmbedBuilder()
                 .setTitle('📥 NOVO REGISTRO')
@@ -120,12 +141,10 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.editReply("✅ Seu formulário foi enviado para análise!");
         }
 
-        // --- LÓGICA DOS BOTÕES DE STAFF (ACEITAR/RECUSAR) ---
+        // --- BOTÕES DE STAFF ---
         if (interaction.isButton() && (interaction.customId.startsWith('aceitar_') || interaction.customId.startsWith('recusar_'))) {
             const [acao, targetId] = interaction.customId.split('_');
             const admin = interaction.member;
-
-            // Segurança: Não pode aceitar o próprio
             if (admin.id === targetId) return interaction.reply({ content: "❌ Você não pode processar seu próprio registro.", ephemeral: true });
 
             const registro = await Registro.findOne({ userId: targetId });
@@ -134,20 +153,17 @@ client.on('interactionCreate', async (interaction) => {
             if (acao === 'aceitar') {
                 const cargoId = CONFIG.CARGOS[registro.cargoNum].id;
                 const nickFormatado = `『Ⓗ¹』${registro.nick}`;
-                
                 await targetMember.roles.add(cargoId);
                 await targetMember.setNickname(nickFormatado).catch(() => console.log("Erro ao mudar nick"));
 
                 registro.status = 'APROVADO';
                 await registro.save();
 
-                // Enviar DM conforme o cargo
                 const embedDM = new EmbedBuilder().setTitle('✅ REGISTRO APROVADO').setColor('Green').setTimestamp();
-                if (['2', '3'].includes(registro.cargoNum)) {
+                if (['2','3'].includes(registro.cargoNum)) 
                     embedDM.setDescription(`Prezado(a), seu acesso ao **Setor Segurança** foi liberado.`);
-                } else {
+                else 
                     embedDM.setDescription(`Prezado(a), seu acesso ao **Setor Suporte** foi liberado.`);
-                }
                 
                 await targetMember.send({ embeds: [embedDM] }).catch(() => null);
                 await interaction.update({ content: `✅ Registro de <@${targetId}> aprovado por ${admin.user.tag}`, embeds: [], components: [] });
@@ -175,4 +191,3 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 client.login(process.env.TOKEN);
-
